@@ -81,6 +81,16 @@ function svgLine(series, { w = 640, h = 180, yMin, yMax, color = '#e07a3f', labe
   return `<svg id="${id}" class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5"/>${dots}<text x="${w - 10}" y="14" text-anchor="end" class="axis">${esc(label)}</text></svg>`;
 }
 
+// chessground caches the board's screen bounds; if the layout shifts after creation
+// (fonts, clocks, panels), clicks map to the wrong squares. Re-measure on any layout change.
+function keepBounds(cg, el) {
+  let raf = 0;
+  const redo = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => cg.redrawAll()); };
+  const ro = new ResizeObserver(redo); ro.observe(document.body); ro.observe(el);
+  setTimeout(redo, 60); setTimeout(redo, 400);
+  return () => { ro.disconnect(); cancelAnimationFrame(raf); };
+}
+
 // ---------------- router ----------------
 let teardown = null;
 function route() {
@@ -195,6 +205,7 @@ function playGame(g) {
     lastMove: g.moves.length ? [g.moves.at(-1).slice(0, 2), g.moves.at(-1).slice(2, 4)] : undefined,
     check: chess.inCheck(),
   });
+  const unBounds = keepBounds(cg, $('#board'));
   $('#topName').textContent = g.userColor === 'w' ? `${L.cls.glyph} ${L.label}` : 'You';
   $('#botName').textContent = g.userColor === 'w' ? 'You' : `${L.cls.glyph} ${L.label}`;
 
@@ -328,7 +339,7 @@ function playGame(g) {
     $('#evalT').onclick = () => { showEval = !showEval; if (showEval) updateEval(); else $('#evalbar').classList.add('hidden'); };
   }
   timer = setInterval(renderClocks, 200);
-  teardown = () => { dead = true; clearInterval(timer); cg.destroy(); };
+  teardown = () => { dead = true; clearInterval(timer); unBounds(); cg.destroy(); };
   sync();
   if (g.unsaved && g.result) { finish(g.result, g.termination); }
   else engineTurn();
@@ -363,6 +374,7 @@ async function viewReview(id) {
     movable: { free: false, showDests: true, events: { after: onExplore } }, highlight: { lastMove: true, check: true },
     drawable: { enabled: true },
   });
+  const unBounds = keepBounds(cg, $('#board'));
   let cur = g.moves.length; // ply index shown (position after `cur` moves)
   let explore = null; // {base, moves:[]}
   let exploreToken = 0;
@@ -496,7 +508,7 @@ async function viewReview(id) {
   $('#reanalyse').onclick = async () => { await runAnalysis(18); renderSummary(); renderGraph(); go(cur); };
   $('#pgn').onclick = async () => { const c = replay(g.startFen, g.moves); const text = g.pgn || c.pgn(); try { await navigator.clipboard.writeText(text); toast('PGN copied'); } catch { modal(`<h3>PGN</h3><textarea rows="10" style="width:100%">${esc(text)}</textarea><div class="btns"><button onclick="document.getElementById('modal').classList.add('hidden')">Close</button></div>`); } };
   $('#archive').onclick = async () => { if (!confirm('Archive this game? It leaves your stats but stays in the database.')) return; await api.post(`/api/games/${id}/archive`, {}); location.hash = '#/games'; };
-  teardown = () => { window.removeEventListener('keydown', onKey); cg.destroy(); exploreToken++; };
+  teardown = () => { window.removeEventListener('keydown', onKey); unBounds(); cg.destroy(); exploreToken++; };
 
   renderSummary(); renderGraph();
   const crit = A && A.summary.critical && A.summary.critical[0];
