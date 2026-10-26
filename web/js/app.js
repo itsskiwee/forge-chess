@@ -84,11 +84,15 @@ function svgLine(series, { w = 640, h = 180, yMin, yMax, color = '#e07a3f', labe
 // chessground caches the board's screen bounds; if the layout shifts after creation
 // (fonts, clocks, panels), clicks map to the wrong squares. Re-measure on any layout change.
 function keepBounds(cg, el) {
-  let raf = 0;
-  const redo = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => cg.redrawAll()); };
+  let t = 0, last = '';
+  const redo = () => { clearTimeout(t); t = setTimeout(() => {
+    const r = el.getBoundingClientRect(); const k = `${r.left},${r.top},${r.width}`;
+    if (k !== last) { last = k; cg.redrawAll(); }
+  }, 30); };
   const ro = new ResizeObserver(redo); ro.observe(document.body); ro.observe(el);
-  setTimeout(redo, 60); setTimeout(redo, 400);
-  return () => { ro.disconnect(); cancelAnimationFrame(raf); };
+  window.addEventListener('scroll', redo, { passive: true });
+  setTimeout(redo, 0); setTimeout(redo, 400);
+  return () => { ro.disconnect(); clearTimeout(t); window.removeEventListener('scroll', redo); };
 }
 
 // ---------------- router ----------------
@@ -206,6 +210,7 @@ function playGame(g) {
     check: chess.inCheck(),
   });
   const unBounds = keepBounds(cg, $('#board'));
+  window.__cg = cg; // debugging handle
   $('#topName').textContent = g.userColor === 'w' ? `${L.cls.glyph} ${L.label}` : 'You';
   $('#botName').textContent = g.userColor === 'w' ? 'You' : `${L.cls.glyph} ${L.label}`;
 
