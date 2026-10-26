@@ -1,0 +1,20 @@
+{
+  "name": "forge-chess",
+  "version": "1.0.0",
+  "description": "Our own chess platform: 5-class engine ladder, deep move review, growth tracking",
+  "scripts": {
+    "serve": "python3 server/forge_server.py",
+    "match": "node tools/match.mjs",
+    "test": "node tools/test.mjs",
+    "vendor": "sh tools/vendor.sh"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "@lichess-org/chessground": "^10.5.0",
+    "chess.js": "^1.4.0",
+    "stockfish": "^19.0.1"
+  },
+  "license": "GPL-3.0-or-later",
+  "private": true
+}

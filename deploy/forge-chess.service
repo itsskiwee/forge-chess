@@ -1,0 +1,17 @@
+[Unit]
+Description=Forge Chess (web UI + game store)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/chess
+ExecStart=/usr/bin/python3 %h/Projects/chess/server/forge_server.py --host 127.0.0.1 --port 8110 --db %h/Projects/chess/data/forge.db --brain-report "%h/Brain/Projects/Chess/Chess - Stats.md" --public-url http://thinkerpad.taila351d7.ts.net:8110
+Restart=on-failure
+RestartSec=5
+MemoryMax=128M
+CPUQuota=50%
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target
