@@ -195,6 +195,13 @@ TAG_TEXT = {
 }
 
 
+def local_date(iso):
+    try:
+        return datetime.fromisoformat(str(iso).replace("Z", "+00:00")).astimezone().date().isoformat()
+    except ValueError:
+        return str(iso or "")[:10]
+
+
 def write_brain_report(store, path, base_url):
     games = store.all_full()
     st = compute_stats(games)
@@ -205,7 +212,7 @@ def write_brain_report(store, path, base_url):
         "## Now", "",
         f"- Ladder rating (Elo vs the Forge engine ladder, rated games only): **{st['rating']}** after {st['totals']['rated']} rated games",
         f"- Record: {st['totals']['wins']}W / {st['totals']['draws']}D / {st['totals']['losses']}L over {st['totals']['games']} games ({st['totals']['analysed']} reviewed)",
-        f"- Average accuracy, last 20 reviewed: {st['avgAccuracy20'] if st['avgAccuracy20'] is not None else 'n/a'}%",
+        f"- Average accuracy, last 20 reviewed: {str(st['avgAccuracy20']) + '%' if st['avgAccuracy20'] is not None else 'n/a'}",
         f"- Blunders per game, last 20 reviewed: {st['avgBlunders20'] if st['avgBlunders20'] is not None else 'n/a'}",
         "", "## Accuracy by phase (last 20 reviewed)", "",
     ]
@@ -227,7 +234,7 @@ def write_brain_report(store, path, base_url):
     for g in list(reversed(games))[:10]:
         s = ((g.get("analysis") or {}).get("summary") or {}).get(g.get("userColor")) or {}
         acc = f"{s.get('accuracy')}%" if s else "not reviewed"
-        lines.append(f"- {g.get('created','')[:10]} vs {g.get('opponent','?')} as {'White' if g.get('userColor')=='w' else 'Black'}: {g.get('result')} ({g.get('termination','')}), accuracy {acc}")
+        lines.append(f"- {local_date(g.get('created'))} vs {g.get('opponent','?')} as {'White' if g.get('userColor')=='w' else 'Black'}: {g.get('result')} ({g.get('termination','')}), accuracy {acc}")
     lines += ["", "Up: [[Chess]]", ""]
     text = "\n".join(lines)
     p = Path(path)
